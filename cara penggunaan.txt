@@ -1,0 +1,143 @@
+A. MEMBUAT DATABASE SAKILA
+1. Install database server: MySql (versi 5)
+2. Install software mysql management: Sql Yog Ultimate (boleh menggunakan yang lain)
+3. Download and Install software pentaho untuk ETL: Pentaho Data Extraction (PDI) versi
+community edition
+4. Copy file sampel data: sakila.sql dan whsakila2021.sql
+5. Buat database dengan nama sakila
+6. Import file sakila.sql ke dalam database sakila
+B. ETL WHSAKILA2021
+1. Tabel Dimensi customer : buat table dengan atribut (customer_id, nama) kemudian masukkan 
+query berikut :
+INSERT INTO whsakila2021.customer 
+SELECT sk.customer_id, CONCAT(sk.first_name,’ ’,sk.last_name) 
+FROM sakila sk
+2. Table Dimensi store : buat table dengan atribut (store_id, kota) kemudian masukkan query 
+berikut :
+INSERT INTO whsakila2021.`store` 
+SELECT st.store_id , ct.`city` 
+FROM sakila.store st 
+JOIN sakila.address ad ON (st.`address_id` = ad.`address_id`) 
+JOIN sakila.city ct ON(ct.`city_id`=ad.`city_id`)
+3. Table Dimensi film : buat table dengan atribut (film_id, judul, kategori) kemudian masukkan 
+query berikut :
+INSERT INTO whsakila2021.film
+SELECT f.film_id, f.title, c.name 
+FROM sakila.film f 
+JOIN sakila.film_category fc ON (f.film_id = fc.film_id) 
+JOIN sakila.category c ON (fc.category_id = c.category_id)
+4. Table Dimensi time : buat table dengan atribut (time_id, tahun, bulan, tanggal, tanggallengkap, 
+namahari) kemudian masukkan query berikut :
+SELECT rental_date 
+FROM sakila.`rental` 
+ORDER BY rental_date 
+ASC LIMIT 1 
+Sedangkan tanggal paling akhir dalam tabel rental yaitu tanggal 14 Februari 2006: 
+SELECT rental_date 
+FROM sakila.`rental` ORDER BY rental_date 
+DESC LIMIT 1
+Menggunakan file CSV :
+• Buat file excel baru 
+• Di baris pertama kolom pertama tuliskan: 1 
+• Di baris pertama kolom kedua tuliskan: =year(E1) 
+• Di baris pertama kolom ketiga tuliskan: =month(E1) 
+• Di baris pertama kolom keempat tuliskan: =day(E1) 
+• Di baris pertama kolom kelima tuliskan: 5/24/2005 
+• Di baris pertama kolom keenam tuliskan: 
+=IF(WEEKDAY(E1)=1;"minggu";IF(WEEKDAY(E1)=2;"senin";IF(WEEK 
+DAY(E1)=3;"selasa";IF(WEEKDAY(E1)=4;"rabu";IF(WEEKDAY(E1)=5; 
+"kamis";IF(WEEKDAY(E1)=6;"jumat";"sabtu"))))))
+• Blok A1:F1 dan drag ke bawah sampai baris ke 342 (30 April 2006) sebagai batasan 
+saja dan tekan Ctrl-C untuk mengcopy 
+• Buat File excel baru 
+• Klik kanan di A1, pilih paste special -> values 
+• Hapus kolom F1 (5/24/2005), dan gantikan dengan berikut: 
+=concatenate(B1,”-“, C1,”-“,D1) 
+Blok dan drag ke bawah sampai 04/30/2006 
+• Simpan file excel terbaru sebagai CSV 
+• Buka SQL YOG, temukan tabel time di database whsakila2021, klik kanan->import-
+>import csv data using Load Local 
+• Pilih file CSV yang dihasilkan di atas 
+• Klik tombol change, ubah fields terminated by dengan koma (\,) 
+• Klik OK, Klik Impor
+5. Table Fakta fakta_pendapatan : buat table dengan atribut (customer_id, time_id, film_id, 
+store_id, amount, lamapinjam) kemudian lakukan Langkah berikut berikut :
+• Susun query di SQL Yog :
+SELECT r.`customer_id`,
+DATE(r.`rental_date`) rental_date,
+i.`film_id`,
+i.`store_id`,
+p.`amount`,
+DATEDIFF(r.return_date,r.rental_date) lamapinjam
+FROM sakila.payment p
+JOIN sakila.rental r ON(p.`rental_id` = r.`rental_id`)
+JOIN sakila.inventory i ON(r.`inventory_id`= i.`inventory_id`)
+ORDER BY r.`customer_id`, r.rental_date
+• Mencari time_id dengan Pentaho Data Integration
+a. Double-Click spoon.bat, jika muncul halaman terkait Repository klik Cancel 
+b. Klik File-> New-> Transformation 
+c. Klik di Tab “View” disebelah kiri Tab “Design” Membuat koneksi database d. Klik Kanan di Database Connections dan Klik New lalu isikan nama databse, 
+username, danpassword sesuai ddengan setting database pada computer.
+e. Klik tombol Test untuk memastikan bahwa koneksi berhasil.
+f. Klik kanan pada sakila10 kemudian klik Share jika anda ingin koneksi ini dipakai 
+berulang-ulang) 
+g. Ulangi langkah d s/d f di atas untuk koneksi ke database whsakila2021, beri nama 
+koneksinya whsakila10.
+6. Menyusun diagram transformasi
+• Klik tab Design di sebelah kanan tab View k. Klik di Input->Table Input , tahan dan 
+drag ke window sebelah kanan (Ini komponen untuk mengambil data dari Sakila ) 
+• Klik di Lookup->Database Lookup, tahan dan drag ke sebelah kanan Table Input. Ini 
+komponen untuk mencari Time_Id untuk rental_date .
+• Klik di Output->Table Output, tahan dan drag ke sebelah kanan Database Lookup 
+• Letakkan kursor pada komponen Table Input, tunggu sebentar, klik pada tanda panah, 
+tahan dan drag ke komponen Database Lookup di sebelah kanannya. (jika ada pilihan, 
+pilih Main Output Step)
+• Ulangi pada komponen selanjutnya sampai dengan Table Output 
+• Dobel Klik pada komponen Table Input 
+• Pilih connection yang sesuai: sakila10 
+• Copy query yang disusun pada langkah 5 dan paste ke dalam box
+• Klik tombol Preview, dan ketikkan 10 (untuk 10 data saja), untuk melihat apakah 
+query bisa memberikan hasil yang dinginkan
+• Klik tombol Close di halaman preview, dan klik tombol OK
+• Selanjutnya adalah mencari time_id untuk rental_date, dobel klik di komponen 
+database lookup pertama, pilih koneksi whsakila10, dan untuk lookup table cari 
+melalui tombol browse untuk tabel time
+•• Klik tombol OK
+• Langkah terakhir adalah mengisikan data ke dalam tabel fakta_pendapatan di 
+whsakila2021
+• Klik pada komponen table output, isikan/pilih koneksi (whsakila10), target table 
+(fakta_pendapatan) dan juga Klik di Specify Database Fields dan mapping-kan Table 
+Field dan Stream Field, kemudian klik OK
+C. MEMBUAT DRILLDOWN
+1. Pertama kita harus paham betul relasi atau perbandingan apa yang dapat kita buat dan ukur 
+pada data yang sudah tersedia. Kali ini kita akan mencoba mengetahui pendapatan pertahun 
+yang kemudian dilihat detailnya berdasarkan nama hari yang ada pada satu tahun dilakukannya 
+transaksi.
+2. Tahapan kedua adalah kita buka dulu sublime kemudian kita buat file baru dengan format php.
+3. Selanjutnya kita buat koneksi menuju database whsakila yang sudah terisi data pada tahapan 
+sebelumnya.
+4. Selanjutnya membuat query untuk menjumlahkan perspektif yang ingin kita ukur yaitu 
+pendapatan berdasarkan tahun
+5.Kemudian kita buat query untuk chart kedua drill down yang mana untuk menjumlahkan 
+pendapatan pada hari yang terdapat transaksi
+6.Membuat fungsi pencarian kategori
+7. Jika sebelumnya kita hanya membuat query untuk mengambil data transaksi per tahun dan 
+perhari disini kita coba untuk mengelompokkan jumlah pendapatan per hari berdasarkan tahun.
+8.Persiapan Data drilldown, mulai dari pembuatan string data hingga pencarian total kategori
+9. Kemudian sudah masuk ke template javascript untuk membangun design drilldown. Pada 
+tahapan ini kita harus membuat file css dan harus mengetahui model grafik apa yang akan 
+tampilkan.
+D. MENAMPILKAN OLAP
+1. Memastikan data telah masuk ke dalam data warehouse dan sudah terintegrasi pada wh sakila
+2. Selanjutnya pastikan anda sudah memiliki TOMCAT pada xampp. 
+3. Jika sudah ,download file mondrian.war iv. Letakkan file mondrian.war pada folder 
+/tomcat/webapps di folder instalasi XAMPP 
+4. Buka XAMPP Control Panel, Jalankan TOMCAT dengan klik catalina_start. Tunggu Hingga 
+terbentuk folder mondrian. 
+5. Setelah terbentuk folder mondrian, maka lakukan stop_catalina
+6. Setelah stop_catalina maka kita bisa langsung memindahkan mondria.war.
+7. Setelah itu kita edit bagian index.html, untuk terintegrasi dengan whsakila
+8. Tambahkan mysql connector pada lib agar datawarehouse dapat terintegrasi.
+9. Edit Testpage dan tambahkan whsakila.jsp kedalam queries
+10. Kemudian untuk mengintegrasikan data antar table pada datawarehouse buatlah dwsakila pada 
+queries. Kemudian coba untuk run localhost:8080/mondrian/testpage maka olap akan muncul
